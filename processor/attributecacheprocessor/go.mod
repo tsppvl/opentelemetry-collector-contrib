@@ -27,6 +27,7 @@ require (
 	go.opentelemetry.io/collector/processor/processorhelper/xprocessorhelper v0.152.1-0.20260514231715-e7f22744c28c
 	go.opentelemetry.io/collector/processor/processortest v0.152.1-0.20260514231715-e7f22744c28c
 	go.opentelemetry.io/collector/processor/xprocessor v0.152.1-0.20260514231715-e7f22744c28c
+	go.opentelemetry.io/otel v1.43.0
 	go.opentelemetry.io/otel/metric v1.43.0
 	go.opentelemetry.io/otel/sdk/metric v1.43.0
 	go.opentelemetry.io/otel/trace v1.43.0
@@ -135,7 +136,6 @@ require (
 	go.opentelemetry.io/collector/pdata/testdata v0.152.1-0.20260514231715-e7f22744c28c // indirect
 	go.opentelemetry.io/collector/pipeline v1.58.1-0.20260514231715-e7f22744c28c // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.60.0 // indirect
-	go.opentelemetry.io/otel v1.43.0 // indirect
 	go.opentelemetry.io/otel/sdk v1.43.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/crypto v0.50.0 // indirect
