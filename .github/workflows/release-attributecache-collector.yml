@@ -1,7 +1,7 @@
 name: Release attributecache-collector
 
 # Trigger: push a tag of the form  collector/vX.Y.Z[-suffix]
-# Example: git tag collector/v0.151.0-tsp && git push origin collector/v0.151.0-tsp
+# Example: git tag collector/v0.152.0-tsp && git push origin collector/v0.152.0-tsp
 on:
   push:
     tags:
@@ -30,12 +30,27 @@ jobs:
         run: echo "VERSION=${GITHUB_REF_NAME#collector/}" >> "$GITHUB_OUTPUT"
 
       - name: Install OCB (OpenTelemetry Collector Builder)
-        run: go install go.opentelemetry.io/collector/cmd/builder@v0.151.0
+        run: go install go.opentelemetry.io/collector/cmd/builder@v0.152.1-0.20260514231715-e7f22744c28c
 
       - name: Patch version into builder config
         working-directory: distributions/attributecache-collector
         run: |
           sed -i "s/^  version: .*/  version: ${{ steps.version.outputs.VERSION }}/" builder-config.yaml
+
+      # v0.152.0 of contrib is not yet published on the Go module proxy — the fork
+      # tracks the main branch ahead of that tag. Generate a replace directive for
+      # every local go.mod so the Go toolchain uses the checked-out source instead
+      # of trying to download from the proxy.
+      # Paths are relative to ./bin/go.mod (one level deeper than this directory),
+      # so the repo root is reached with "../../..".
+      - name: Generate local replace directives
+        run: |
+          config=distributions/attributecache-collector/builder-config.yaml
+          find . -type f -name "go.mod" -exec dirname {} \; | sort | while read mod_path; do
+            mod="${mod_path#.}"
+            [[ "$mod" == */distributions/attributecache-collector/bin* ]] && continue
+            echo "  - github.com/open-telemetry/opentelemetry-collector-contrib${mod} => ../../..${mod}" >> "$config"
+          done
 
       - name: Generate collector source (skip compilation)
         working-directory: distributions/attributecache-collector
