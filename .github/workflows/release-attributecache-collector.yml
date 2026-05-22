@@ -1,0 +1,66 @@
+name: Release attributecache-collector
+
+# Trigger: push a tag of the form  collector/vX.Y.Z[-suffix]
+# Example: git tag collector/v0.151.0-tsp && git push origin collector/v0.151.0-tsp
+on:
+  push:
+    tags:
+      - 'collector/v*'
+
+jobs:
+  release:
+    name: Build and publish release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # required to create GitHub releases and upload assets
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: processor/attributecacheprocessor/go.mod
+
+      - name: Extract version from tag
+        id: version
+        # Tag is collector/vX.Y.Z[-suffix]; strip the prefix to get vX.Y.Z[-suffix]
+        run: echo "VERSION=${GITHUB_REF_NAME#collector/}" >> "$GITHUB_OUTPUT"
+
+      - name: Install OCB (OpenTelemetry Collector Builder)
+        run: go install go.opentelemetry.io/collector/cmd/builder@v0.151.0
+
+      - name: Patch version into builder config
+        working-directory: distributions/attributecache-collector
+        run: |
+          sed -i "s/^  version: .*/  version: ${{ steps.version.outputs.VERSION }}/" builder-config.yaml
+
+      - name: Generate collector source (skip compilation)
+        working-directory: distributions/attributecache-collector
+        run: builder --config builder-config.yaml --skip-compilation
+
+      - name: Cross-compile for all target platforms
+        working-directory: distributions/attributecache-collector/bin
+        run: |
+          mkdir -p ../release
+          platforms="linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64"
+          for platform in $platforms; do
+            GOOS="${platform%/*}"
+            GOARCH="${platform#*/}"
+            output="otelcol-attributecache_${{ steps.version.outputs.VERSION }}_${GOOS}_${GOARCH}"
+            [ "$GOOS" = "windows" ] && output="${output}.exe"
+            echo "Building ${output}..."
+            CGO_ENABLED=0 GOOS="$GOOS" GOARCH="$GOARCH" go build \
+              -ldflags "-s -w" \
+              -o "../release/${output}" \
+              .
+          done
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ steps.version.outputs.VERSION }}
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
+          files: distributions/attributecache-collector/release/*
