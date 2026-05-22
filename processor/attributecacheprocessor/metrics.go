@@ -24,7 +24,7 @@ import (
 // looks the merged attribute set up against the cached table, and asks
 // the enricher to write the matched row's enrichment columns.
 func (p *attributeCacheProcessor) processMetrics(ctx context.Context, md pmetric.Metrics) (pmetric.Metrics, error) {
-	table := matcherTable(p.cache.Current())
+	table := p.currentTable.Load()
 	if table == nil || p.engine == nil || p.enricher == nil {
 		// Cache not yet loaded or processor misconfigured; pass through.
 		return md, nil

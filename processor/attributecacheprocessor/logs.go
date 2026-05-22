@@ -20,7 +20,7 @@ import (
 // evaluates the OTTL input filters, looks up the merged attribute set,
 // and writes enrichment columns onto each LogRecord.
 func (p *attributeCacheProcessor) processLogs(ctx context.Context, ld plog.Logs) (plog.Logs, error) {
-	table := matcherTable(p.cache.Current())
+	table := p.currentTable.Load()
 	if table == nil || p.engine == nil || p.enricher == nil {
 		return ld, nil
 	}

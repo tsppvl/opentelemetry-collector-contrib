@@ -20,7 +20,7 @@ import (
 // evaluates the OTTL input filters, looks up the merged attribute set,
 // and writes enrichment columns onto each Span.
 func (p *attributeCacheProcessor) processTraces(ctx context.Context, td ptrace.Traces) (ptrace.Traces, error) {
-	table := matcherTable(p.cache.Current())
+	table := p.currentTable.Load()
 	if table == nil || p.engine == nil || p.enricher == nil {
 		return td, nil
 	}

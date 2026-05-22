@@ -24,7 +24,7 @@ import (
 // the resource and scope levels; item-level (per-Profile) enrichment requires
 // attribute-table mutation and is intentionally deferred to a follow-up.
 func (p *attributeCacheProcessor) processProfiles(ctx context.Context, pd pprofile.Profiles) (pprofile.Profiles, error) {
-	table := matcherTable(p.cache.Current())
+	table := p.currentTable.Load()
 	if table == nil || p.engine == nil || p.enricher == nil {
 		return pd, nil
 	}

@@ -341,12 +341,10 @@ func (cfg *Config) validateSymbols() error {
 
 func (cfg *Config) validateMatchMode() error {
 	switch cfg.MatchMode {
-	case "", MatchModeLinear:
+	case "", MatchModeLinear, MatchModeOptimized:
 		return nil
-	case MatchModeOptimized:
-		return errors.New("match_mode 'optimized' is not yet supported; use 'linear'")
 	default:
-		return fmt.Errorf("match_mode: %q is not recognized (allowed: %q)", cfg.MatchMode, MatchModeLinear)
+		return fmt.Errorf("match_mode: %q is not recognized (allowed: %q, %q)", cfg.MatchMode, MatchModeLinear, MatchModeOptimized)
 	}
 }
 

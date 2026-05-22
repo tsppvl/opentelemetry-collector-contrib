@@ -124,6 +124,56 @@ func BenchmarkLinearEngineRegex100k(b *testing.B) {
 	}
 }
 
+// BenchmarkOptimizedEngine100k measures OptimizedEngine performance with 100k
+// unique-key rows. The trie is O(1) per lookup regardless of table size.
+func BenchmarkOptimizedEngine100k(b *testing.B) {
+	cfg := MatchConfig{
+		Columns:        []ColumnConfig{{Name: "service", MatchType: MatchTypeString}},
+		DefaultSymbol:  "**",
+		MatchAllSymbol: "%%",
+		NullSymbol:     "@@",
+	}
+	table, target := buildStringTable(benchRows)
+	engine := NewOptimizedEngine(table, cfg)
+
+	b.ResetTimer()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		row := engine.Match(table, target)
+		if row == nil {
+			b.Fatal("expected a match")
+		}
+	}
+}
+
+// BenchmarkOptimizedEngineMultiCol100k measures OptimizedEngine on 5-column
+// lookups. The trie path is C levels deep (C=5) regardless of row count.
+func BenchmarkOptimizedEngineMultiCol100k(b *testing.B) {
+	cfg := MatchConfig{
+		Columns: []ColumnConfig{
+			{Name: "env", MatchType: MatchTypeString},
+			{Name: "region", MatchType: MatchTypeString},
+			{Name: "service", MatchType: MatchTypeString},
+			{Name: "tenant", MatchType: MatchTypeString},
+			{Name: "tier", MatchType: MatchTypeString},
+		},
+		DefaultSymbol:  "**",
+		MatchAllSymbol: "%%",
+		NullSymbol:     "@@",
+	}
+	table, target := buildMultiColTable(benchRows)
+	engine := NewOptimizedEngine(table, cfg)
+
+	b.ResetTimer()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		row := engine.Match(table, target)
+		if row == nil {
+			b.Fatal("expected a match")
+		}
+	}
+}
+
 // BenchmarkLinearEngineMultiCol100k measures LinearEngine performance with 100k rows,
 // five string-match columns, matching the last row (worst case).
 func BenchmarkLinearEngineMultiCol100k(b *testing.B) {

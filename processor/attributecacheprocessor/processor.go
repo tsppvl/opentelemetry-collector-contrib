@@ -41,6 +41,13 @@ type attributeCacheProcessor struct {
 	// refresh ticker.
 	cache *cache.Cache
 
+	// currentTable holds the most-recently converted *matcher.LookupTable.
+	// It is updated by the cache OnSuccess hook so that every signal
+	// processor gets a stable pointer for each table snapshot. The
+	// OptimizedEngine uses pointer equality to detect when the table has
+	// changed and the trie must be rebuilt.
+	currentTable atomic.Pointer[matcher.LookupTable]
+
 	// engine evaluates incoming attributes against the lookup table and
 	// returns the best-matching row.
 	engine matcher.MatchEngine

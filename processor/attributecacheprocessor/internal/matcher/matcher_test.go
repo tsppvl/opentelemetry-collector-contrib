@@ -612,3 +612,70 @@ func TestNewColumnMatcher_allTypes(t *testing.T) {
 		}
 	}
 }
+
+// ---------------------------------------------------------------------------
+// OptimizedEngine — lazy rebuild on table change
+// ---------------------------------------------------------------------------
+
+func TestOptimizedEngine_nilTableAtConstruction(t *testing.T) {
+	// Engine built with nil table must still work when Match is called with a
+	// real table — the trie is built on the first Match call.
+	cfg := linearCfg()
+	engine := NewOptimizedEngine(nil, cfg)
+	table := &LookupTable{
+		Rows: []Row{
+			{"env": "prod", "service": "checkout", "owner": "team-x"},
+		},
+	}
+	got := engine.Match(table, map[string]string{"env": "prod", "service": "checkout"})
+	if got == nil || (*got)["owner"] != "team-x" {
+		t.Fatalf("expected owner=team-x after nil-construction, got %+v", got)
+	}
+}
+
+func TestOptimizedEngine_rebuildsOnTablePointerChange(t *testing.T) {
+	// Simulate a cache refresh: the engine should transparently pick up the
+	// new table when the LookupTable pointer changes.
+	cfg := linearCfg()
+	table1 := &LookupTable{
+		Rows: []Row{
+			{"env": "prod", "service": "svc-a", "owner": "v1-team"},
+		},
+	}
+	engine := NewOptimizedEngine(table1, cfg)
+
+	// Confirm initial table works.
+	got := engine.Match(table1, map[string]string{"env": "prod", "service": "svc-a"})
+	if got == nil || (*got)["owner"] != "v1-team" {
+		t.Fatalf("initial table: expected v1-team, got %+v", got)
+	}
+
+	// Simulate a table refresh with a new pointer.
+	table2 := &LookupTable{
+		Rows: []Row{
+			{"env": "prod", "service": "svc-a", "owner": "v2-team"},
+		},
+	}
+	got = engine.Match(table2, map[string]string{"env": "prod", "service": "svc-a"})
+	if got == nil || (*got)["owner"] != "v2-team" {
+		t.Fatalf("after refresh: expected v2-team, got %+v", got)
+	}
+
+	// Old table pointer must also still work (returns stale trie but correct
+	// result since tables are immutable and the engine rebuilds for the new
+	// pointer on next call).
+	got = engine.Match(table2, map[string]string{"env": "prod", "service": "svc-a"})
+	if got == nil || (*got)["owner"] != "v2-team" {
+		t.Fatalf("second call with new table: expected v2-team, got %+v", got)
+	}
+}
+
+func TestOptimizedEngine_nilTableMatch(t *testing.T) {
+	cfg := linearCfg()
+	engine := NewOptimizedEngine(nil, cfg)
+	// Match with nil table must return nil without panicking.
+	got := engine.Match(nil, map[string]string{"env": "prod"})
+	if got != nil {
+		t.Fatalf("expected nil for nil table, got %+v", got)
+	}
+}

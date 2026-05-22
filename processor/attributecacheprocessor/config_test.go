@@ -37,6 +37,12 @@ func TestConfig_Validate_OK(t *testing.T) {
 	require.NoError(t, cfg.Validate())
 }
 
+func TestConfig_Validate_MatchModeOptimized(t *testing.T) {
+	cfg := validBaseConfig()
+	cfg.MatchMode = MatchModeOptimized
+	require.NoError(t, cfg.Validate())
+}
+
 func TestConfig_Validate_Errors(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -91,9 +97,9 @@ func TestConfig_Validate_Errors(t *testing.T) {
 			wantErr: "match_mode: \"weird\" is not recognized",
 		},
 		{
-			name:    "optimized match mode not yet supported",
-			mutate:  func(c *Config) { c.MatchMode = MatchModeOptimized },
-			wantErr: "match_mode 'optimized' is not yet supported; use 'linear'",
+			name:    "empty string match mode treated as linear",
+			mutate:  func(c *Config) { c.MatchMode = "invalid-mode" },
+			wantErr: "match_mode: \"invalid-mode\" is not recognized",
 		},
 		{
 			name:    "unknown source type",

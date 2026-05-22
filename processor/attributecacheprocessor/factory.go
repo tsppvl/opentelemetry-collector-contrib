@@ -80,9 +80,19 @@ func newProcessorFromConfig(set processor.Settings, cfg component.Config) (*attr
 	if err != nil {
 		return nil, fmt.Errorf("create data source: %w", err)
 	}
+
+	// pPtr is set after the processor is constructed so that the OnSuccess
+	// hook can reference it. The hook is only ever called from cache.Start()
+	// or the refresh goroutine, both of which execute after this function
+	// returns (i.e. after pPtr is assigned), so the dereference is safe.
+	var pPtr *attributeCacheProcessor
 	hooks := cache.RefreshHooks{
 		OnSuccess: func(ctx context.Context, rowCount int64) {
 			tel.recordRefreshSuccess(ctx, rowCount)
+			// Publish a stable *matcher.LookupTable for the current snapshot
+			// so the OptimizedEngine can detect table changes via pointer
+			// equality without per-call allocation.
+			pPtr.currentTable.Store(matcherTable(pPtr.cache.Current()))
 		},
 		OnError: func(ctx context.Context) {
 			tel.recordRefreshError(ctx)
@@ -90,6 +100,7 @@ func newProcessorFromConfig(set processor.Settings, cfg component.Config) (*attr
 	}
 	c := cache.New(ds, oCfg.RefreshInterval, set.TelemetrySettings.Logger, hooks)
 	p := newAttributeCacheProcessor(set.TelemetrySettings, oCfg, tel, c)
+	pPtr = p
 
 	if err := buildEngineAndEnricher(p, oCfg); err != nil {
 		return nil, err
@@ -101,9 +112,7 @@ func newProcessorFromConfig(set processor.Settings, cfg component.Config) (*attr
 }
 
 // buildEngineAndEnricher constructs the match engine and enricher from the
-// declarative column configuration. The OptimizedEngine requires the lookup
-// table at build time and is therefore deferred to a follow-up; this commit
-// always uses LinearEngine as a correct (last-match-wins) fallback.
+// declarative column configuration.
 func buildEngineAndEnricher(p *attributeCacheProcessor, cfg *Config) error {
 	matchCols := make([]matcher.ColumnConfig, 0, len(cfg.Columns))
 	matchNames := make([]string, 0, len(cfg.Columns))
@@ -141,11 +150,13 @@ func buildEngineAndEnricher(p *attributeCacheProcessor, cfg *Config) error {
 		MatchAllSymbol: cfg.MatchAllSymbol,
 		NullSymbol:     cfg.NullSymbol,
 	}
-	// OptimizedEngine needs the table at construction time and is therefore
-	// built lazily in a follow-up task. LinearEngine is correct (it produces
-	// the same last-match-wins result, just slower) and is used regardless
-	// of MatchMode for now.
-	p.engine = matcher.NewLinearEngine(matchCfg)
+	if cfg.MatchMode == MatchModeOptimized {
+		// NewOptimizedEngine with nil table defers trie construction to the
+		// first Match call after the cache loads (via currentTable).
+		p.engine = matcher.NewOptimizedEngine(nil, matchCfg)
+	} else {
+		p.engine = matcher.NewLinearEngine(matchCfg)
+	}
 	p.matchColumnNames = matchNames
 
 	p.enricher = &enricher.Enricher{
