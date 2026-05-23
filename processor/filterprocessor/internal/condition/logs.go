@@ -12,6 +12,7 @@ import (
 	"go.uber.org/multierr"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/internal/filter/expr"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/internal/filter/filterottl"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/ottl"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/ottl/contexts/ottllog"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/ottl/contexts/ottlresource"
@@ -152,7 +153,24 @@ func WithLogErrorMode(errorMode ottl.ErrorMode) LogParserCollectionOption {
 }
 
 func WithLogCommonParsers(functions map[string]ottl.Factory[*ottlresource.TransformContext]) LogParserCollectionOption {
-	return LogParserCollectionOption(withCommonParsers(functions, newLogConditionsFromResource, newLogConditionsFromScope))
+	return func(pc *ottl.ParserCollection[parsedLogConditions]) error {
+		rp, err := ottlresource.NewParser(functions, pc.Settings, ottlresource.EnablePathContextNames())
+		if err != nil {
+			return err
+		}
+		sp, err := ottlscope.NewParser(filterottl.StandardScopeFuncs(), pc.Settings, ottlscope.EnablePathContextNames())
+		if err != nil {
+			return err
+		}
+		if err = ottl.WithParserCollectionContext(ottlresource.ContextName, &rp,
+			ottl.WithConditionConverter[*ottlresource.TransformContext, parsedLogConditions](
+				resourceConditionsConverter[parsedLogConditions](newLogConditionsFromResource)))(pc); err != nil {
+			return err
+		}
+		return ottl.WithParserCollectionContext(ottlscope.ContextName, &sp,
+			ottl.WithConditionConverter[*ottlscope.TransformContext, parsedLogConditions](
+				scopeConditionsConverter[parsedLogConditions](newLogConditionsFromScope)))(pc)
+	}
 }
 
 func NewLogParserCollection(settings component.TelemetrySettings, options ...LogParserCollectionOption) (*LogParserCollection, error) {

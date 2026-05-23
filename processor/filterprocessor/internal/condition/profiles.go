@@ -12,6 +12,7 @@ import (
 	"go.uber.org/multierr"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/internal/filter/expr"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/internal/filter/filterottl"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/ottl"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/ottl/contexts/ottlprofile"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/ottl/contexts/ottlresource"
@@ -152,7 +153,24 @@ func WithProfileErrorMode(errorMode ottl.ErrorMode) ProfileParserCollectionOptio
 }
 
 func WithProfileCommonParsers(functions map[string]ottl.Factory[*ottlresource.TransformContext]) ProfileParserCollectionOption {
-	return ProfileParserCollectionOption(withCommonParsers(functions, newProfileConditionsFromResource, newProfileConditionsFromScope))
+	return func(pc *ottl.ParserCollection[parsedProfileConditions]) error {
+		rp, err := ottlresource.NewParser(functions, pc.Settings, ottlresource.EnablePathContextNames())
+		if err != nil {
+			return err
+		}
+		sp, err := ottlscope.NewParser(filterottl.StandardScopeFuncs(), pc.Settings, ottlscope.EnablePathContextNames())
+		if err != nil {
+			return err
+		}
+		if err = ottl.WithParserCollectionContext(ottlresource.ContextName, &rp,
+			ottl.WithConditionConverter[*ottlresource.TransformContext, parsedProfileConditions](
+				resourceConditionsConverter[parsedProfileConditions](newProfileConditionsFromResource)))(pc); err != nil {
+			return err
+		}
+		return ottl.WithParserCollectionContext(ottlscope.ContextName, &sp,
+			ottl.WithConditionConverter[*ottlscope.TransformContext, parsedProfileConditions](
+				scopeConditionsConverter[parsedProfileConditions](newProfileConditionsFromScope)))(pc)
+	}
 }
 
 func NewProfileParserCollection(settings component.TelemetrySettings, options ...ProfileParserCollectionOption) (*ProfileParserCollection, error) {

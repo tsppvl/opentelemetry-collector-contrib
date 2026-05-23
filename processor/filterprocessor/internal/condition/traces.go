@@ -12,6 +12,7 @@ import (
 	"go.uber.org/multierr"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/internal/filter/expr"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/internal/filter/filterottl"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/ottl"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/ottl/contexts/ottlresource"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/ottl/contexts/ottlscope"
@@ -191,7 +192,24 @@ func WithTraceErrorMode(errorMode ottl.ErrorMode) TraceParserCollectionOption {
 }
 
 func WithTraceCommonParsers(functions map[string]ottl.Factory[*ottlresource.TransformContext]) TraceParserCollectionOption {
-	return TraceParserCollectionOption(withCommonParsers(functions, newTraceConditionsFromResource, newTraceConditionsFromScope))
+	return func(pc *ottl.ParserCollection[parsedTraceConditions]) error {
+		rp, err := ottlresource.NewParser(functions, pc.Settings, ottlresource.EnablePathContextNames())
+		if err != nil {
+			return err
+		}
+		sp, err := ottlscope.NewParser(filterottl.StandardScopeFuncs(), pc.Settings, ottlscope.EnablePathContextNames())
+		if err != nil {
+			return err
+		}
+		if err = ottl.WithParserCollectionContext(ottlresource.ContextName, &rp,
+			ottl.WithConditionConverter[*ottlresource.TransformContext, parsedTraceConditions](
+				resourceConditionsConverter[parsedTraceConditions](newTraceConditionsFromResource)))(pc); err != nil {
+			return err
+		}
+		return ottl.WithParserCollectionContext(ottlscope.ContextName, &sp,
+			ottl.WithConditionConverter[*ottlscope.TransformContext, parsedTraceConditions](
+				scopeConditionsConverter[parsedTraceConditions](newTraceConditionsFromScope)))(pc)
+	}
 }
 
 func NewTraceParserCollection(settings component.TelemetrySettings, options ...TraceParserCollectionOption) (*TraceParserCollection, error) {

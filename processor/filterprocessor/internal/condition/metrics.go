@@ -12,6 +12,7 @@ import (
 	"go.uber.org/multierr"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/internal/filter/expr"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/internal/filter/filterottl"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/ottl"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/ottl/contexts/ottldatapoint"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/ottl/contexts/ottlmetric"
@@ -282,7 +283,24 @@ func WithMetricErrorMode(errorMode ottl.ErrorMode) MetricParserCollectionOption 
 }
 
 func WithMetricCommonParsers(functions map[string]ottl.Factory[*ottlresource.TransformContext]) MetricParserCollectionOption {
-	return MetricParserCollectionOption(withCommonParsers(functions, newMetricConditionsFromResource, newMetricConditionsFromScope))
+	return func(pc *ottl.ParserCollection[parsedMetricConditions]) error {
+		rp, err := ottlresource.NewParser(functions, pc.Settings, ottlresource.EnablePathContextNames())
+		if err != nil {
+			return err
+		}
+		sp, err := ottlscope.NewParser(filterottl.StandardScopeFuncs(), pc.Settings, ottlscope.EnablePathContextNames())
+		if err != nil {
+			return err
+		}
+		if err = ottl.WithParserCollectionContext(ottlresource.ContextName, &rp,
+			ottl.WithConditionConverter[*ottlresource.TransformContext, parsedMetricConditions](
+				resourceConditionsConverter[parsedMetricConditions](newMetricConditionsFromResource)))(pc); err != nil {
+			return err
+		}
+		return ottl.WithParserCollectionContext(ottlscope.ContextName, &sp,
+			ottl.WithConditionConverter[*ottlscope.TransformContext, parsedMetricConditions](
+				scopeConditionsConverter[parsedMetricConditions](newMetricConditionsFromScope)))(pc)
+	}
 }
 
 func NewMetricParserCollection(settings component.TelemetrySettings, options ...MetricParserCollectionOption) (*MetricParserCollection, error) {
