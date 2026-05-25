@@ -73,6 +73,18 @@ jobs:
               .
           done
 
+      - name: Build Docker image and export as tar
+        working-directory: distributions/attributecache-collector
+        run: |
+          # Copy the linux/amd64 binary into the Docker build context (next to Dockerfile).
+          cp release/otelcol-attributecache_${{ steps.version.outputs.VERSION }}_linux_amd64 \
+             otelcol-attributecache
+          IMAGE=otelcol-attributecache:${{ steps.version.outputs.VERSION }}
+          docker build --platform linux/amd64 -t "$IMAGE" .
+          docker save "$IMAGE" \
+            | gzip > release/otelcol-attributecache_${{ steps.version.outputs.VERSION }}_linux_amd64_docker.tar.gz
+          rm otelcol-attributecache
+
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
