@@ -1,8 +1,17 @@
 # Binary must be present in the build context as  otelcol-attributecache
 # before running docker build.  The release workflow copies the appropriate
 # platform binary here; for a manual build use the locally compiled binary.
-FROM gcr.io/distroless/static-debian12:nonroot
+FROM alpine:latest@sha256:5b10f432ef3da1b8d4c7eb6c487f2f5a8f096bc91145e68878dd4a5019afde11 AS prep
+RUN apk --update add ca-certificates
+
+FROM scratch
+
+ARG USER_UID=10001
+ARG USER_GID=10001
+USER ${USER_UID}:${USER_GID}
+
+COPY --from=prep /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY otelcol-attributecache /otelcol-attributecache
-EXPOSE 4317 4318 4319 8888 55679
+EXPOSE 4317 55680 55679
 ENTRYPOINT ["/otelcol-attributecache"]
-CMD ["--config", "/etc/otelcol/config.yaml"]
+CMD ["--config", "/etc/otel/config.yaml"]
