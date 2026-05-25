@@ -11,7 +11,7 @@ ARG USER_GID=10001
 USER ${USER_UID}:${USER_GID}
 
 COPY --from=prep /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
-COPY otelcol-attributecache /otelcol-attributecache
+COPY otelcol-attributecache /otelcontribcol
 EXPOSE 4317 55680 55679
-ENTRYPOINT ["/otelcol-attributecache"]
+ENTRYPOINT ["/otelcontribcol"]
 CMD ["--config", "/etc/otel/config.yaml"]
