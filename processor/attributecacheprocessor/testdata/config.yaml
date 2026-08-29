@@ -1,0 +1,26 @@
+attributecache:
+  refresh_interval: 0s
+  match_mode: optimized
+  default_symbol: "**"
+  match_all_symbol: "%%"
+  null_symbol: "@@"
+  property_insertion:
+    start: "["
+    end: "]"
+  source:
+    type: inline
+    inline:
+      rows:
+        - host: web-01
+          env: prod
+          team: payments
+  columns:
+    - name: host
+      role: match
+      match_type: string
+    - name: env
+      role: enrich
+      target: resource
+    - name: team
+      role: enrich
+      target: resource

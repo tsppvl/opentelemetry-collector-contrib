@@ -1,0 +1,99 @@
+name: Release attributecache-collector
+
+# Trigger: push a tag of the form  collector/vX.Y.Z[-suffix]
+# Example: git tag collector/v0.159.0-tsp && git push origin collector/v0.159.0-tsp
+on:
+  push:
+    tags:
+      - 'collector/v*'
+
+jobs:
+  release:
+    name: Build and publish release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # required to create GitHub releases and upload assets
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: processor/attributecacheprocessor/go.mod
+          cache-dependency-path: processor/attributecacheprocessor/go.sum
+
+      - name: Extract version from tag
+        id: version
+        # Tag is collector/vX.Y.Z[-suffix]; strip the prefix to get vX.Y.Z[-suffix]
+        run: echo "VERSION=${GITHUB_REF_NAME#collector/}" >> "$GITHUB_OUTPUT"
+
+      - name: Install OCB (OpenTelemetry Collector Builder)
+        run: go install go.opentelemetry.io/collector/cmd/builder@v0.159.0
+
+      - name: Patch version into builder config
+        working-directory: distributions/attributecache-collector
+        run: |
+          sed -i "s/^  version: .*/  version: ${{ steps.version.outputs.VERSION }}/" builder-config.yaml
+
+      # The fork's contrib modules (including the custom attributecache processor)
+      # are not published to the Go module proxy at these versions. Generate a
+      # replace directive for every local go.mod so the Go toolchain uses the
+      # checked-out source instead of trying to download from the proxy.
+      # Paths are relative to ./bin/go.mod (one level deeper than this directory),
+      # so the repo root is reached with "../../..".
+      - name: Generate local replace directives
+        run: |
+          config=distributions/attributecache-collector/builder-config.yaml
+          find . -type f -name "go.mod" -exec dirname {} \; | sort | while read mod_path; do
+            mod="${mod_path#.}"
+            [[ "$mod" == */distributions/attributecache-collector/bin* ]] && continue
+            echo "  - github.com/open-telemetry/opentelemetry-collector-contrib${mod} => ../../..${mod}" >> "$config"
+          done
+
+      - name: Generate collector source (skip compilation)
+        working-directory: distributions/attributecache-collector
+        run: builder --config builder-config.yaml --skip-compilation
+
+      - name: Cross-compile for all target platforms
+        working-directory: distributions/attributecache-collector/bin
+        run: |
+          mkdir -p ../release
+          platforms="linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64"
+          for platform in $platforms; do
+            GOOS="${platform%/*}"
+            GOARCH="${platform#*/}"
+            output="otelcol-attributecache_${{ steps.version.outputs.VERSION }}_${GOOS}_${GOARCH}"
+            [ "$GOOS" = "windows" ] && output="${output}.exe"
+            echo "Building ${output}..."
+            CGO_ENABLED=0 GOOS="$GOOS" GOARCH="$GOARCH" go build \
+              -ldflags "-s -w" \
+              -o "../release/${output}" \
+              .
+          done
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build multi-arch Docker image and export as OCI tar
+        working-directory: distributions/attributecache-collector
+        run: |
+          # Place both arch binaries in the build context for TARGETARCH selection.
+          cp release/otelcol-attributecache_${{ steps.version.outputs.VERSION }}_linux_amd64 \
+             otelcol-attributecache_amd64
+          cp release/otelcol-attributecache_${{ steps.version.outputs.VERSION }}_linux_arm64 \
+             otelcol-attributecache_arm64
+          docker buildx build \
+            --platform linux/amd64,linux/arm64 \
+            --output "type=oci,dest=release/otelcol-attributecache_${{ steps.version.outputs.VERSION }}_multiarch_docker.tar" \
+            .
+          rm otelcol-attributecache_amd64 otelcol-attributecache_arm64
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ steps.version.outputs.VERSION }}
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
+          files: distributions/attributecache-collector/release/*

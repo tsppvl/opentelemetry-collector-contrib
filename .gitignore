@@ -50,3 +50,11 @@ internal/tools/testresults/*
 go.work*
 
 /result
+
+# --- aiworkflow bootstrap ---
+.aiworkflow/
+.claude/
+.claude-local/
+AGENTS.md
+CLAUDE.md
+CODEX.md
