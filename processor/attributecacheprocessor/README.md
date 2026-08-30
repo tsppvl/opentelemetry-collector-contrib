@@ -24,7 +24,7 @@ All four OTel signal types are supported. Items that do not satisfy the optional
 | Key | Type | Default | Required | Description |
 |---|---|---|---|---|
 | `refresh_interval` | duration | `0s` | No | How often the lookup table reloads. `0s` means load once at startup, never refresh. |
-| `match_mode` | string | `optimized` | No | Matching engine: `optimized` (trie, best-specific-match) or `linear` (source-order, last-match-wins). |
+| `match_mode` | string | `linear` | No | Matching engine: `optimized` (trie, best-specific-match) or `linear` (source-order, last-match-wins). |
 | `default_symbol` | string | `""` | No | Cell value meaning "use this row if no more-specific row matched". Disabled when empty. |
 | `match_all_symbol` | string | `""` | No | Cell value that always matches, even when the attribute is absent. Disabled when empty. Forbidden with `match_type: string`. |
 | `null_symbol` | string | `""` | No | Cell value that matches only when the attribute is absent; suppresses attribute write in enrich columns. Disabled when empty. |
@@ -192,9 +192,9 @@ Range notation: `[` / `]` are inclusive bounds, `]` / `[` (outer) are exclusive.
 
 ### Matching modes
 
-**`optimized` (default)**: builds a trie-like decision tree at load time. Evaluates most-specific matching row first; default and match-all symbols are lower-priority branches. O(depth × branching) per lookup. Recommended for production.
+**`optimized`**: builds a trie-like decision tree at load time. Evaluates most-specific matching row first; default and match-all symbols are lower-priority branches. O(depth × branching) per lookup. Recommended for production.
 
-**`linear`**: evaluates rows in source order; the **last** matching row wins. O(rows × columns) per lookup. Useful when the source order directly encodes override precedence.
+**`linear` (default)**: evaluates rows in source order; the **last** matching row wins. O(rows × columns) per lookup. Useful when the source order directly encodes override precedence.
 
 > **Note for linear mode**: Special symbols (`default_symbol`, `match_all_symbol`) have no priority semantics in linear mode — they are treated as literal cell values. If you want a default-fallback row, place it **before** more-specific rows (so more-specific rows override it by being last).
 

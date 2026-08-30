@@ -56,7 +56,7 @@ type Config struct {
 	RefreshInterval time.Duration `mapstructure:"refresh_interval"`
 
 	// MatchMode selects the matching engine implementation. Defaults to
-	// MatchModeOptimized.
+	// MatchModeLinear (also used when the field is left empty).
 	MatchMode MatchMode `mapstructure:"match_mode"`
 
 	// DefaultSymbol is the cell value that signals "fallback when no more
