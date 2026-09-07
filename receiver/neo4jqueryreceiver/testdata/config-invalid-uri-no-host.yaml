@@ -1,0 +1,7 @@
+neo4j_query:
+  uri: "bolt://"
+  queries:
+    - cypher: "RETURN 1 AS one"
+      metrics:
+        - metric_name: one
+          value_column: one

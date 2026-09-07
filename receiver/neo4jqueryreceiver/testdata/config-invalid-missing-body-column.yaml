@@ -1,0 +1,6 @@
+neo4j_query:
+  uri: bolt://localhost:7687
+  queries:
+    - cypher: "RETURN 'x' AS message"
+      logs:
+        - attribute_columns: ["message"]

@@ -1,0 +1,24 @@
+display_name: Neo4j Query Receiver
+type: neo4j_query
+
+description: |
+  The Neo4j Query Receiver uses custom Cypher queries to generate logs and/or metrics from a Neo4j database connection.
+
+status:
+  class: receiver
+  stability:
+    development: [metrics, logs]
+  distributions: []
+  codeowners:
+    active: []
+
+tests:
+  config:
+    uri: bolt://localhost:7687
+    username: neo4j
+    password: secret
+    queries:
+      - cypher: "RETURN 1 AS one"
+        metrics:
+          - metric_name: test.metric
+            value_column: one

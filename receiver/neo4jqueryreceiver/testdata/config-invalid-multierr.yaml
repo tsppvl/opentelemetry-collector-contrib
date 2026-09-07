@@ -1,0 +1,8 @@
+neo4j_query:
+  uri: ftp://localhost
+  queries:
+    - cypher: ""
+      metrics:
+        - metric_name: ""
+          value_column: ""
+          value_type: blob

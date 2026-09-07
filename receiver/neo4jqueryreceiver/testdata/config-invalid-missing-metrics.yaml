@@ -1,0 +1,4 @@
+neo4j_query:
+  uri: bolt://localhost:7687
+  queries:
+    - cypher: "RETURN 1 AS one"

@@ -1,0 +1,2 @@
+neo4j_query:
+  uri: bolt://localhost:7687
