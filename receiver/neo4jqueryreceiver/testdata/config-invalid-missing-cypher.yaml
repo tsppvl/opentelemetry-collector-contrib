@@ -1,0 +1,6 @@
+neo4j_query:
+  uri: bolt://localhost:7687
+  queries:
+    - metrics:
+        - metric_name: one
+          value_column: one

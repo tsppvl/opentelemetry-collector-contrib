@@ -1,0 +1,8 @@
+neo4j_query:
+  uri: bolt://localhost:7687
+  queries:
+    - cypher: "RETURN 'x' AS message"
+      tracking_start_value: 1
+      tracking_parameter: since
+      logs:
+        - body_column: message

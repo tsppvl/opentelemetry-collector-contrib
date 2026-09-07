@@ -1,4 +1,5 @@
-# Full otelcol-contrib distribution + custom attributecache processor.
+# Full otelcol-contrib distribution + custom attributecache processor and
+# neo4j_query receiver.
 # Component list mirrors the official otelcol-contrib v0.159.0 manifest
 # (opentelemetry-collector-releases/distributions/otelcol-contrib), except the
 # obi eBPF receiver (needs a vendored source archive). All contrib components
@@ -21,8 +22,8 @@
 dist:
   module: github.com/tsppvl/otelcol-attributecache
   name: otelcol-attributecache
-  description: OpenTelemetry Collector Contrib with attributecache processor
-  version: 0.159.0-tsp
+  description: OpenTelemetry Collector Contrib with attributecache processor and neo4j_query receiver
+  version: 0.159.0-tsp.1
   output_path: ./bin
   build_tags: "grpcnotrace"
 
@@ -219,6 +220,8 @@ receivers:
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/mongodbreceiver v0.159.0
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/mysqlreceiver v0.159.0
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/namedpipereceiver v0.159.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/neo4jqueryreceiver v0.159.0
+    path: ../../receiver/neo4jqueryreceiver
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/netflowreceiver v0.159.0
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/nginxreceiver v0.159.0
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/nsxtreceiver v0.159.0

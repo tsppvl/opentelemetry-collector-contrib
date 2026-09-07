@@ -1,0 +1,24 @@
+neo4j_query:
+  collection_interval: 10s
+  uri: bolt://localhost:7687
+  username: neo4j
+  password: s3cr3t
+  database: movies
+  max_connection_pool_size: 5
+  telemetry:
+    logs:
+      query: true
+  queries:
+    - cypher: "MATCH (m:Movie) WHERE m.released >= $since RETURN m.genre AS genre, count(*) AS count"
+      parameters:
+        since: 2000
+      metrics:
+        - metric_name: movie.count
+          value_column: "count"
+          attribute_columns: ["genre"]
+          data_type: sum
+          value_type: int
+          monotonic: false
+          aggregation: cumulative
+          static_attributes:
+            foo: bar
