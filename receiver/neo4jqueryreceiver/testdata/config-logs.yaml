@@ -1,0 +1,19 @@
+neo4j_query:
+  uri: bolt://localhost:7687
+  username: neo4j
+  password: s3cr3t
+  storage: file_storage
+  queries:
+    - cypher: "MATCH (e:Event) WHERE e.id > $tracking_value RETURN e.id AS id, e.message AS message, e.level AS level, e.at AS at ORDER BY e.id"
+      tracking_column: id
+      tracking_start_value: 10000
+      logs:
+        - body_column: message
+          attribute_columns: ["level"]
+          ts_column: at
+    - cypher: "MATCH (e:Event) WHERE e.at > datetime($since) RETURN e.message AS message, e.at AS at ORDER BY e.at"
+      tracking_column: at
+      tracking_parameter: since
+      tracking_start_value: "1970-01-01T00:00:00Z"
+      logs:
+        - body_column: message

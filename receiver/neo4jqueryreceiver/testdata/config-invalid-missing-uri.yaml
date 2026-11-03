@@ -1,0 +1,6 @@
+neo4j_query:
+  queries:
+    - cypher: "RETURN 1 AS one"
+      metrics:
+        - metric_name: one
+          value_column: one

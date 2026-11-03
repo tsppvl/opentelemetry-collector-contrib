@@ -1,0 +1,7 @@
+neo4j_query:
+  uri: neo4j+s://graph.example.com
+  queries:
+    - cypher: "MATCH (n) RETURN count(n) AS nodes"
+      metrics:
+        - metric_name: graph.nodes
+          value_column: nodes

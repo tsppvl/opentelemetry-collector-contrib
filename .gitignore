@@ -53,3 +53,10 @@ go.work*
 
 # API compatibility snapshots
 /internal/data/apidiff/
+# --- aiworkflow bootstrap ---
+.aiworkflow/
+.claude/
+.claude-local/
+AGENTS.md
+CLAUDE.md
+CODEX.md

@@ -1,0 +1,79 @@
+type: attributecache
+
+status:
+  class: processor
+  stability:
+    development: [traces, metrics, logs, profiles]
+  distributions: []
+  warnings: []
+  codeowners:
+    active: []
+
+tests:
+  config:
+    refresh_interval: 0s
+    source:
+      type: inline
+      inline:
+        rows: []
+    columns: []
+  skip_lifecycle: true
+  skip_shutdown: true
+
+telemetry:
+  metrics:
+    processor_attributecache_items_enriched:
+      enabled: true
+      description: Total telemetry items that matched a lookup row and were enriched.
+      unit: "1"
+      sum:
+        value_type: int
+        monotonic: true
+      stability: development
+    processor_attributecache_items_passthrough:
+      enabled: true
+      description: Total telemetry items that did not match the input filter and passed through unchanged.
+      unit: "1"
+      sum:
+        value_type: int
+        monotonic: true
+      stability: development
+    processor_attributecache_items_processed:
+      enabled: true
+      description: Total telemetry items evaluated against the input filter.
+      unit: "1"
+      sum:
+        value_type: int
+        monotonic: true
+      stability: development
+    processor_attributecache_lookup_duration:
+      enabled: true
+      description: Latency histogram of lookup table match operations.
+      unit: "s"
+      histogram:
+        value_type: double
+        bucket_boundaries: [0.00001, 0.0001, 0.001, 0.01, 0.1]
+      stability: development
+    processor_attributecache_refresh_errors_total:
+      enabled: true
+      description: Total number of failed table refresh attempts.
+      unit: "1"
+      sum:
+        value_type: int
+        monotonic: true
+      stability: development
+    processor_attributecache_refresh_total:
+      enabled: true
+      description: Total number of successful table refreshes.
+      unit: "1"
+      sum:
+        value_type: int
+        monotonic: true
+      stability: development
+    processor_attributecache_table_rows:
+      enabled: true
+      description: Current number of rows loaded in the lookup table.
+      unit: "1"
+      gauge:
+        value_type: int
+      stability: development
